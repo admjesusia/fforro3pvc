@@ -15,13 +15,15 @@ import {
   IconSafety,
   IconMaximize,
   IconMinimize,
-  IconInfo
+  IconInfo,
+  IconHammer
 } from './components/Icons';
 
 function App() {
   // Input State
   const [width, setWidth] = useState<string>('');
   const [length, setLength] = useState<string>('');
+  const [structureType, setStructureType] = useState<'Metálica' | 'Madeira'>('Metálica');
   
   // Catalog Filters
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
@@ -78,7 +80,11 @@ function App() {
     setAiData(null);
 
     try {
-      const result = await calculateBudget({ width: w, length: l }, selectedProductId);
+      const result = await calculateBudget(
+        { width: w, length: l }, 
+        selectedProductId,
+        { wasteMargin: 0.10, structureType }
+      );
       setBudget(result);
 
       // Get AI insights using the product name
@@ -158,6 +164,24 @@ function App() {
                   </div>
                 </div>
               </div>
+              
+              {/* Structure Type */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase text-slate-500">Tipo de Estrutura</label>
+                <div className="relative">
+                  <IconHammer className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <select
+                    value={structureType}
+                    onChange={(e) => setStructureType(e.target.value as 'Metálica' | 'Madeira')}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none bg-white appearance-none"
+                  >
+                    <option value="Metálica">Estrutura Metálica (Metalon)</option>
+                    <option value="Madeira">Estrutura de Madeira (Sarrafo)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 my-2"></div>
 
               {/* Type Selection */}
               <div className="space-y-2">

@@ -1,3 +1,4 @@
+
 import { Product } from '../types';
 
 export const CATALOG: Product[] = [
@@ -67,7 +68,9 @@ export const CATALOG: Product[] = [
   { id: '53', name: 'Torre Pinça 400mm C/2 Furos', category: 'Acessorio', subCategory: 'Fixacao', dimensions: {}, color: 'Zincado', price: 100.00, unit: 'un' }, 
   { id: '45', name: 'Parafuso Drywall Ponta Agulha 3,5x25', category: 'Acessorio', subCategory: 'Parafuso', dimensions: {}, color: 'Preto Fosfatizado', price: 0.10, unit: 'un' },
   { id: '44', name: 'Parafuso Chip Chata 4,0x35 Parede', category: 'Acessorio', subCategory: 'Parafuso', dimensions: {}, color: 'Zincado Amarelo', price: 0.15, unit: 'un' },
+  { id: '77', name: 'Parafuso Ripa 3,5x12', category: 'Acessorio', subCategory: 'Parafuso', dimensions: {}, color: 'Zincado', price: 0.10, unit: 'un' },
   
   // Generic Items for fallback logic (Simulated based on market if not in PDF)
   { id: 'GEN_METALON', name: 'Perfil Estrutural Metalon 15x15 6m', category: 'Estrutura', subCategory: 'Metalon', dimensions: { length: 6.0 }, color: 'Galvanizado', price: 42.00, unit: 'br' },
+  { id: 'GEN_SARRAFO', name: 'Sarrafo de Madeira 2,5cm x 5cm (Pinho) 3m', category: 'Estrutura', subCategory: 'Madeira', dimensions: { length: 3.0 }, color: 'Natural', price: 12.00, unit: 'br' },
 ];

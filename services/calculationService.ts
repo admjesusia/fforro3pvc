@@ -1,8 +1,10 @@
+
 import { BudgetResult, Dimensions, MaterialItem, Product } from '../types';
 import { CATALOG } from '../data/catalog';
 
 interface CalculationOptions {
   wasteMargin: number; // 0.0 to 1.0 (e.g., 0.1 for 10%)
+  structureType: 'Metálica' | 'Madeira';
 }
 
 // Helper to finding products
@@ -59,13 +61,14 @@ export const getForroSubCategories = (): string[] => {
 export const calculateBudget = async (
   dimensions: Dimensions,
   selectedForroId: string,
-  options: CalculationOptions = { wasteMargin: 0.10 }
+  options: CalculationOptions = { wasteMargin: 0.10, structureType: 'Metálica' }
 ): Promise<BudgetResult> => {
   
   // Simulate processing delay
   await new Promise(resolve => setTimeout(resolve, 500));
 
   const { width, length } = dimensions;
+  const { structureType } = options;
   const mainProduct = CATALOG.find(p => p.id === selectedForroId);
 
   if (!mainProduct) {
@@ -180,33 +183,71 @@ export const calculateBudget = async (
   }
 
   // --- 3. STRUCTURE (ESTRUTURA) ---
-  // If not using "Gesso" specific profiles, we use generic Metalon logic or "Torre Pinça" if noted.
-  // The catalog has "Torre Pinça" (R$ 100.00). This is very specific. 
-  // Let's use the GEN_METALON fallback for the main grid.
-  
-  // Grid spacing 0.60m
-  // Structure lines run perpendicular to PVC.
+  // Grid spacing 0.60m. Structure lines run perpendicular to PVC.
   // If PVC is along Length, Structure is along Width.
   const structureSpacing = 0.60;
   const numStructureLines = Math.floor(length / structureSpacing) - 1; // Approx
   const structureLinearMeters = Math.max(0, numStructureLines * width);
   
-  const metalon = CATALOG.find(p => p.id === 'GEN_METALON');
-  if (metalon) {
-    const metalonBars = Math.ceil(structureLinearMeters / (metalon.dimensions.length || 6));
-    if (metalonBars > 0) {
-      structureProducts.push({
-        product: metalon,
-        quantity: metalonBars,
-        total: metalonBars * metalon.price,
-        obs: `Estrutura a cada ${structureSpacing}m`
+  if (structureType === 'Metálica') {
+    const metalon = CATALOG.find(p => p.id === 'GEN_METALON');
+    if (metalon) {
+      const metalonBars = Math.ceil(structureLinearMeters / (metalon.dimensions.length || 6));
+      if (metalonBars > 0) {
+        structureProducts.push({
+          product: metalon,
+          quantity: metalonBars,
+          total: metalonBars * metalon.price,
+          obs: `Estrutura Metalon a cada ${structureSpacing}m`
+        });
+      }
+    }
+    
+    // Hangers (Gancheira/Tirante) for Metal Structure
+    const gancheira = CATALOG.find(p => p.id === '25');
+    if (gancheira) {
+      const numHangers = Math.ceil((width * length) / 1.5);
+      accessoriesProducts.push({
+        product: gancheira,
+        quantity: numHangers,
+        total: numHangers * gancheira.price,
+        obs: 'Sustentação para metalon'
       });
     }
+
+  } else {
+    // Madeira (Sarrafo)
+    const sarrafo = CATALOG.find(p => p.id === 'GEN_SARRAFO');
+    if (sarrafo) {
+      const sarrafoBars = Math.ceil(structureLinearMeters / (sarrafo.dimensions.length || 3));
+      if (sarrafoBars > 0) {
+        structureProducts.push({
+          product: sarrafo,
+          quantity: sarrafoBars,
+          total: sarrafoBars * sarrafo.price,
+          obs: `Sarrafo de madeira a cada ${structureSpacing}m`
+        });
+      }
+    }
+    // Wood structure typically nailed or screwed to beams, assuming simple fixation if no specific hanger needed
+    // or include generic fixation logic if needed. For now, no 'Gancheira' added for wood.
   }
 
   // --- 4. ACCESSORIES ---
-  // Parafusos Fixação (Drywall Screw for Structure)
-  const screwProduct = CATALOG.find(p => p.id === '45'); // Ponta Agulha 3.5x25
+  // Parafusos Fixação PVC -> Estrutura
+  let screwProduct;
+  let screwObs = 'Fixação PVC na estrutura';
+  
+  if (structureType === 'Metálica') {
+    // Use Drywall Screw (Ponta Agulha)
+    screwProduct = CATALOG.find(p => p.id === '45'); // Ponta Agulha 3.5x25
+    screwObs = 'Ponta Agulha (PVC em Metal)';
+  } else {
+    // Use Wood Screw (Parafuso Ripa)
+    screwProduct = CATALOG.find(p => p.id === '77'); // Parafuso Ripa 3.5x12
+    screwObs = 'Parafuso Ripa (PVC em Madeira)';
+  }
+
   if (screwProduct) {
     // Approx 20 screws per m2
     const numScrews = Math.ceil(width * length * 20);
@@ -214,11 +255,11 @@ export const calculateBudget = async (
       product: screwProduct,
       quantity: numScrews,
       total: numScrews * screwProduct.price,
-      obs: 'Estimativa 20/m²'
+      obs: `${screwObs} (~20/m²)`
     });
   }
   
-  // Fixação Parede (Chip Chata + Bucha implied)
+  // Fixação Parede (Chip Chata + Bucha implied) for finishing profiles
   const wallScrew = CATALOG.find(p => p.id === '44');
   if (wallScrew) {
     // Perimter / 0.5m
@@ -227,21 +268,7 @@ export const calculateBudget = async (
       product: wallScrew,
       quantity: numWallScrews,
       total: numWallScrews * wallScrew.price,
-      obs: 'Fixação arremates'
-    });
-  }
-
-  // Hangers (Gancheira/Tirante)
-  // Catalog has "Gancheira 3/8" (ID 25, 21.50).
-  const gancheira = CATALOG.find(p => p.id === '25');
-  if (gancheira) {
-    // 1 hanger every 1.2m2 approx
-    const numHangers = Math.ceil((width * length) / 1.5);
-    accessoriesProducts.push({
-      product: gancheira,
-      quantity: numHangers,
-      total: numHangers * gancheira.price,
-      obs: 'Sustentação estrutura'
+      obs: 'Fixação arremates (parede)'
     });
   }
 
@@ -257,11 +284,11 @@ export const calculateBudget = async (
   const laborCost = width * length * laborRate;
 
   // Justification Logic
-  let justification = `Otimização baseada nas dimensões exatas (${width}x${length}m). `;
+  let justification = `Otimização baseada nas dimensões (${width}x${length}m) com estrutura ${structureType.toLowerCase()}. `;
   if (mainProduct.subCategory?.includes('Madeirado')) {
-    justification += `A escolha do forro ${mainProduct.color} foi combinada automaticamente com arremates da mesma linha para harmonia estética, evitando desperdício com testes de cor. `;
+    justification += `A escolha do forro ${mainProduct.color} foi combinada automaticamente com arremates da mesma linha para harmonia estética. `;
   } else {
-    justification += "Cálculo padrão de aproveitamento de réguas com corte otimizado. ";
+    justification += "Cálculo de aproveitamento de réguas com corte otimizado. ";
   }
   
   if (arremateProduct && arremateProduct.subCategory) {
